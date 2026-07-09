@@ -1,0 +1,39 @@
+name: Daily Work Report to LINE
+
+on:
+  schedule:
+    # รันทุกวันจันทร์ - ศุกร์ ตอนเวลา 17:30 น. เวลาไทย (10:30 UTC)
+    - cron: '30 10 * * 1-5'
+  workflow_dispatch: # เปิดให้กดรันเองมือได้ด้วย
+
+jobs:
+  generate-and-send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # ดึงประวัติทั้งหมดเพื่อดู commit log
+
+      - name: Generate Summary and Send to LINE
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+        run: |
+          # 1. สร้างหัวข้อรายงาน (ระบุวันที่ปัจจุบัน)
+          REPORT_DATE=$(date +'%Y-%m-%d')
+          echo "📅 Daily Report ($REPORT_DATE)" > report.txt
+          echo "" >> report.txt
+          echo "🚀 Commits Today:" >> report.txt
+          
+          # 2. ดึงข้อมูล Git Commits ของวันนี้
+          git log --since="midnight" --oneline --pretty=format:"- %s (%an)" >> report.txt
+          
+          # 3. ตรวจสอบว่ามี commit ไหม ถ้าไม่มีให้ปรับข้อความ
+          if [ $(wc -l < report.txt) -le 3 ]; then
+            echo "- ไม่มีข้อมูลการ Commit ในวันนี้" >> report.txt
+          fi
+          
+          # 4. ส่งข้อมูลเข้า LINE Notify ผ่าน cURL
+          curl -X POST -H "Authorization: Bearer $LINE_TOKEN" \
+            -F "message=\$(cat report.txt)" \
+            https://notify-api.line.me/api/notify
