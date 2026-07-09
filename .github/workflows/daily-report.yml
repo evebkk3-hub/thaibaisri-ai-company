@@ -1,9 +1,9 @@
-name: Daily Work Report (Save to Git)
+name: Hourly Work Report (Save to Git)
 
 on:
   schedule:
-    # รันทุกวันจันทร์ - ศุกร์ ตอนเวลา 17:30 น. เวลาไทย (10:30 UTC)
-    - cron: '30 10 * * 1-5'
+    # ⏱️ รันทุก ๆ ต้นชั่วโมง (นาทีที่ 0 ของทุกชั่วโมง)
+    - cron: '0 * * * *'
   workflow_dispatch: # เปิดให้กดรันเองมือได้ด้วย
 
 jobs:
@@ -13,24 +13,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # ดึงประวัติทั้งหมดเพื่อดู commit log
+          fetch-depth: 0
 
-      - name: Generate Daily Report File
+      - name: Generate Hourly Report File
         run: |
-          # 1. ตั้งชื่อไฟล์ตามวันที่ปัจจุบัน เช่น daily-reports/report-2026-07-09.md
+          # 1. ตั้งชื่อไฟล์แยกตามวัน เช่น daily-reports/report-2026-07-09.md
           mkdir -p daily-reports
           REPORT_FILE="daily-reports/report-$(date +'%Y-%m-%d').md"
           
-          # 2. เขียนเนื้อหารายงาน
-          echo "# 📅 Daily Work Report ($(date +'%Y-%m-%d'))" > $REPORT_FILE
+          # 2. เขียนเนื้อหารายงาน (อัปเดตข้อมูลล่าสุด)
+          echo "# 📅 Work Report ($(date +'%Y-%m-%d'))" > $REPORT_FILE
+          echo "⏱️ *Last Updated: $(date +'%H:%M') น.*" >> $REPORT_FILE
           echo "" >> $REPORT_FILE
           echo "### 🚀 Commits Today:" >> $REPORT_FILE
           
-          # ดึง Git Commits ของวันนี้
+          # ดึง Git Commits ทั้งหมดของวันนี้
           git log --since="midnight" --oneline --pretty=format:"- %s (%an)" >> $REPORT_FILE
           
-          # ตรวจสอบว่ามี commit ไหม ถ้าไม่มีให้ปรับข้อความ
-          if [ $(wc -l < $REPORT_FILE) -le 4 ]; then
+          # ตรวจสอบว่ามี commit ไหม
+          if [ $(wc -l < $REPORT_FILE) -le 5 ]; then
             echo "- ไม่มีข้อมูลการ Commit ในวันนี้" >> $REPORT_FILE
           fi
 
@@ -39,5 +40,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add daily-reports/
-          git commit -m "chore: automated daily report $(date +'%Y-%m-%d') [skip ci]" || exit 0
+          git commit -m "chore: automated hourly report update [skip ci]" || exit 0
           git push
