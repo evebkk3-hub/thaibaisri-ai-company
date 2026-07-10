@@ -1,0 +1,8 @@
+[project]
+name = "thaibaisri-ai-company"
+version = "0.1.0"
+description = "AI company workers for Thai Baisri YouTube growth operations"
+requires-python = ">=3.11"
+
+[tool.black]
+line-length = 100

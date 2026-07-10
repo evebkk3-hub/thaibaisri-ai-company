@@ -1,0 +1,56 @@
+name: Daily Executive Report
+
+on:
+  schedule:
+    # 08:00 Asia/Bangkok = 01:00 UTC.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-executive-report
+  cancel-in-progress: false
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    env:
+      CHANNEL_NAME: Thai Baisri
+      CURRENT_SUBSCRIBERS: "72200"
+      TARGET_SUBSCRIBERS: "100000"
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_TO: ${{ secrets.MAIL_TO }}
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run tests before report
+        run: python -m unittest discover -s tests -p "test_*.py" -t .
+
+      - name: Generate daily executive report
+        run: python apps/daily_report.py
+
+      - name: Commit generated report and memory
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add database reports/daily-reports
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: generate daily executive report"
+          git push
